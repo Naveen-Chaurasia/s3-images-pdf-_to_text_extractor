@@ -1,5 +1,9 @@
+from flask import Flask, jsonify
 import boto3
 import time
+app = Flask(__name__)
+
+
 
 def startJob(s3BucketName, objectName):
     response = None
@@ -59,17 +63,22 @@ def getJobResults(jobId):
 
 # Document
 s3BucketName = "naveen-chaurasia-bucket"
-documentName = "1647404296550-A._P._J._Abdul_Kalam_-_Wikipedia.pdf"
+documentName = "1645ed46_cd9c_496e_a1c3_4e637fb0c541_w461c132_r1_3_inch_camlock_pipe.pdf"
 
-jobId = startJob(s3BucketName, documentName)
-print("Started job with id: {}".format(jobId))
-if(isJobComplete(jobId)):
-    response = getJobResults(jobId)
 
-#print(response)
+@app.route("/")
+def home():
 
-# Print detected text
-for resultPage in response:
-    for item in resultPage["Blocks"]:
-        if item["BlockType"] == "LINE":
-            print ('\033[94m' +  item["Text"] + '\033[0m')
+
+    jobId = startJob(s3BucketName, documentName)
+    print("Started job with id: {}".format(jobId))
+    if(isJobComplete(jobId)):
+        response = getJobResults(jobId)
+
+    #print(response)
+    return response
+    # # Print detected text
+    # for resultPage in response:
+    #     for item in resultPage["Blocks"]:
+    #         if item["BlockType"] == "LINE":
+    #             print ('\033[94m' +  item["Text"] + '\033[0m')
