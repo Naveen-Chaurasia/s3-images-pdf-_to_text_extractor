@@ -1,3 +1,5 @@
+#for extracting contents in json format
+
 from flask import Flask, jsonify
 import boto3
 import time
