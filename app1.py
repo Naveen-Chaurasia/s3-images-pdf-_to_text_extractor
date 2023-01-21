@@ -6,6 +6,11 @@ import re
 import json
 from collections import defaultdict
 
+# Document
+s3BucketName = "naveen-chaurasia-bucket"
+documentName = "1645ed46_cd9c_496e_a1c3_4e637fb0c541_w461c132_r1_3_inch_camlock_pipe.pdf"
+
+
 
 def get_kv_map(file_name):
     with open(file_name, 'rb') as file:
