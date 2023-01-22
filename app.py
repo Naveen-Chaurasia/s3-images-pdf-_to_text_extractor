@@ -1,86 +1,111 @@
-#for extracting contents in json format
-
-from flask import Flask, jsonify
+# https://docs.aws.amazon.com/textract/latest/dg/examples-extract-kvp.html
+from flask import Flask, jsonify,request
 import boto3
-import time
+import sys
+import re
+import json
+from collections import defaultdict
 app = Flask(__name__)
 
+def convertToBinaryData(filename):
+    # Convert digital data to binary format
+    with open("D:\pythone\s3_to_text_extractor_FLASK_API\*****", 'rb') as file:
+        binaryData = file.read()
+    return binaryData
+
+def get_kv_map(file_name):
+    with open("D:\pythone\s3_to_text_extractor_FLASK_API\*****", 'rb') as file:
+        img_test = file.read()
+        bytes_test = bytearray(img_test)
+        print('Image loaded', file_name)
+
+    # process using image bytes
+    client = boto3.client('textract')
+    response = client.analyze_document(Document={'Bytes': bytes_test}, FeatureTypes=['FORMS'])
+
+    # Get the text blocks
+    blocks = response['Blocks']
+
+    # get key and value maps
+    key_map = {}
+    value_map = {}
+    block_map = {}
+    for block in blocks:
+        block_id = block['Id']
+        block_map[block_id] = block
+        if block['BlockType'] == "KEY_VALUE_SET":
+            if 'KEY' in block['EntityTypes']:
+                key_map[block_id] = block
+            else:
+                value_map[block_id] = block
+
+    return key_map, value_map, block_map
 
 
-def startJob(s3BucketName, objectName):
-    response = None
-    client = boto3.client('textract',region_name='us-east-1')
-    response = client.start_document_text_detection(
-    DocumentLocation={
-        'S3Object': {
-            'Bucket':  s3BucketName,
-            'Name': objectName
-        }
-    })
+def get_kv_relationship(key_map, value_map, block_map):
+    kvs = defaultdict(list)
+    for block_id, key_block in key_map.items():
+        value_block = find_value_block(key_block, value_map)
+        key = get_text(key_block, block_map)
+        val = get_text(value_block, block_map)
+        kvs[key].append(val)
+    return kvs
 
-    return response["JobId"]
 
-def isJobComplete(jobId):
-    time.sleep(5)
-    client = boto3.client('textract',region_name='us-east-1')
-    response = client.get_document_text_detection(JobId=jobId)
-    status = response["JobStatus"]
-    print("Job status: {}".format(status))
+def find_value_block(key_block, value_map):
+    for relationship in key_block['Relationships']:
+        if relationship['Type'] == 'VALUE':
+            for value_id in relationship['Ids']:
+                value_block = value_map[value_id]
+    return value_block
 
-    while(status == "IN_PROGRESS"):
-        time.sleep(5)
-        response = client.get_document_text_detection(JobId=jobId)
-        status = response["JobStatus"]
-        print("Job status: {}".format(status))
 
-    return status
+def get_text(result, blocks_map):
+    text = ''
+    if 'Relationships' in result:
+        for relationship in result['Relationships']:
+            if relationship['Type'] == 'CHILD':
+                for child_id in relationship['Ids']:
+                    word = blocks_map[child_id]
+                    if word['BlockType'] == 'WORD':
+                        text += word['Text'] + ' '
+                    if word['BlockType'] == 'SELECTION_ELEMENT':
+                        if word['SelectionStatus'] == 'SELECTED':
+                            text += 'X '
 
-def getJobResults(jobId):
+    return text
 
-    pages = []
 
-    time.sleep(5)
+def print_kvs(kvs):
+    for key, value in kvs.items():
+        print(key, ":", value)
 
-    client = boto3.client('textract',region_name='us-east-1')
-    response = client.get_document_text_detection(JobId=jobId)
-    
-    pages.append(response)
-    print("Resultset page recieved: {}".format(len(pages)))
-    nextToken = None
-    if('NextToken' in response):
-        nextToken = response['NextToken']
 
-    while(nextToken):
-        time.sleep(5)
-
-        response = client.get_document_text_detection(JobId=jobId, NextToken=nextToken)
-
-        pages.append(response)
-        print("Resultset page recieved: {}".format(len(pages)))
-        nextToken = None
-        if('NextToken' in response):
-            nextToken = response['NextToken']
-
-    return pages
-
-# Document
-s3BucketName = "naveen-chaurasia-bucket"
-documentName = "1645ed46_cd9c_496e_a1c3_4e637fb0c541_w461c132_r1_3_inch_camlock_pipe.pdf"
-
+def search_value(kvs, search_key):
+    for key, value in kvs.items():
+        if re.search(search_key, key, re.IGNORECASE):
+            return value
 
 @app.route("/")
 def home():
+    # file_name = (request.files['file'])
+    uploaded_file = request.files['file']
+    if uploaded_file.filename != '':
+        uploaded_file.save(uploaded_file.filename)
+        file_name = convertToBinaryData(uploaded_file.filename)
+    key_map, value_map, block_map = get_kv_map(file_name)
+
+    # Get Key Value relationship
+    kvs = get_kv_relationship(key_map, value_map, block_map)
+    print("\n\n== FOUND KEY : VALUE pairs ===\n")
+    return kvs
+    # print_kvs(kvs)
+
+    # # Start searching a key value
+    # while input('\n Do you want to search a value for a key? (enter "n" for exit) ') != 'n':
+    #     search_key = input('\n Enter a search key:')
+    #     print('The value is:', search_value(kvs, search_key))
 
 
-    jobId = startJob(s3BucketName, documentName)
-    print("Started job with id: {}".format(jobId))
-    if(isJobComplete(jobId)):
-        response = getJobResults(jobId)
 
-    #print(response)
-    return response
-    # # Print detected text
-    # for resultPage in response:
-    #     for item in resultPage["Blocks"]:
-    #         if item["BlockType"] == "LINE":
-    #             print ('\033[94m' +  item["Text"] + '\033[0m')
+
