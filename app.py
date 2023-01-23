@@ -1,4 +1,5 @@
 # https://docs.aws.amazon.com/textract/latest/dg/examples-extract-kvp.html
+
 from flask import Flask, jsonify,request
 import boto3
 import sys
@@ -9,12 +10,12 @@ app = Flask(__name__)
 
 def convertToBinaryData(filename):
     # Convert digital data to binary format
-    with open("D:\pythone\s3_to_text_extractor_FLASK_API\*****", 'rb') as file:
+    with open("D:\pythone\s3_to_text_extractor_FLASK_API\Mirror.pdf", 'rb') as file:
         binaryData = file.read()
     return binaryData
 
 def get_kv_map(file_name):
-    with open("D:\pythone\s3_to_text_extractor_FLASK_API\*****", 'rb') as file:
+    with open("D:\pythone\s3_to_text_extractor_FLASK_API\Mirror.pdf", 'rb') as file:
         img_test = file.read()
         bytes_test = bytearray(img_test)
         print('Image loaded', file_name)
