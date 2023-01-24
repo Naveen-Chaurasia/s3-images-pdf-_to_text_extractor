@@ -26,7 +26,10 @@ def get_kv_map(file_name):
 
     # Get the text blocks
     blocks = response['Blocks']
-
+    print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+    print(blocks)
+    print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+###################################
     # get key and value maps
     key_map = {}
     value_map = {}
@@ -39,7 +42,6 @@ def get_kv_map(file_name):
                 key_map[block_id] = block
             else:
                 value_map[block_id] = block
-
     return key_map, value_map, block_map
 
 
@@ -94,6 +96,7 @@ def home():
     if uploaded_file.filename != '':
         uploaded_file.save(uploaded_file.filename)
         file_name = convertToBinaryData(uploaded_file.filename)
+        
     key_map, value_map, block_map = get_kv_map(file_name)
 
     # Get Key Value relationship
