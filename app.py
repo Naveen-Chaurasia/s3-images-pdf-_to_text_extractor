@@ -8,14 +8,14 @@ import json
 from collections import defaultdict
 app = Flask(__name__)
 
-def convertToBinaryData(filename):
-    # Convert digital data to binary format
-    with open("D:\pythone\s3_to_text_extractor_FLASK_API\Mirror.pdf", 'rb') as file:
-        binaryData = file.read()
-    return binaryData
+# def convertToBinaryData(filename):
+#     # Convert digital data to binary format
+#     with open("D:\pythone\s3_to_text_extractor_FLASK_API\Mirror.pdf", 'rb') as file:
+#         binaryData = file.read()
+#     return binaryData
 
 def get_kv_map(file_name):
-    with open("D:\pythone\s3_to_text_extractor_FLASK_API\Mirror.pdf", 'rb') as file:
+    with open(file_name, 'rb') as file:
         img_test = file.read()
         bytes_test = bytearray(img_test)
         print('Image loaded', file_name)
@@ -95,8 +95,8 @@ def home():
     uploaded_file = request.files['file']
     if uploaded_file.filename != '':
         uploaded_file.save(uploaded_file.filename)
-        file_name = convertToBinaryData(uploaded_file.filename)
-        
+        #file = convertToBinaryData(uploaded_file.filename)
+        file_name=uploaded_file.filename
     key_map, value_map, block_map = get_kv_map(file_name)
 
     # Get Key Value relationship
