@@ -1,3 +1,5 @@
+# https://docs.aws.amazon.com/textract/latest/dg/examples-export-table-csv.html
+
 import webbrowser, os
 import json
 import boto3
