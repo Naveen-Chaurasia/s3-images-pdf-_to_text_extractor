@@ -55,7 +55,7 @@ def get_table_csv_results(file_name):
 
     # Get the text blocks
     blocks=response['Blocks']
-    pprint(blocks)
+    # pprint(blocks)
 
     blocks_map = {}
     table_blocks = []
@@ -69,26 +69,50 @@ def get_table_csv_results(file_name):
 
     csv = ''
     for index, table in enumerate(table_blocks):
+
+        print(table_blocks)
         csv += generate_table_csv(table, blocks_map, index +1)
-        csv += '\n\n'
+        # csv += '\n\n'
 
     return csv
 
 def generate_table_csv(table_result, blocks_map, table_index):
     rows = get_rows_columns_map(table_result, blocks_map)
+    l=0
+
+    print("IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII")
+    print(rows)
+    print("IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII")
 
     table_id = 'Table_' + str(table_index)
     
     # get cells.
-    csv = 'Table: {0}\n\n'.format(table_id)
+    # csv = 'Table: {0}\n\n'.format(table_id)
+    csv=''
 
     for row_index, cols in rows.items():
         
         for col_index, text in cols.items():
-            csv += '{}'.format(text) + ","
-        csv += '\n'
+            print("********************************************************************")
+            print(text)
+            print(type(text))
+            
+            print("****************************************")
+            if(text=="QTY "):
+              l=3
+              print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+              
+           
+    if(l>=1):
+        for row_index, cols in rows.items():
         
-    csv += '\n\n\n'
+            for col_index, text in cols.items():
+                
+                csv += '{}'.format(text) + ","
+
+            csv += '\n'
+        
+    # csv += '\n\n\n'
     return csv
 
 def main(file_name):
