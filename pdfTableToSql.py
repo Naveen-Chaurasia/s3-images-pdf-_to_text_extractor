@@ -96,29 +96,24 @@ def get_table_csv_results(file_name):
 def generate_table_csv(table_result, blocks_map, table_index):
     rows = get_rows_columns_map(table_result, blocks_map)
     l=0
-
+    r=[]
     print("IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII")
     print(rows)
     print(type(rows))
     print("IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII")
 
     table_id = 'Table_' + str(table_index)
-    
-    # get cells.
-    # csv = 'Table: {0}\n\n'.format(table_id)
+
     csv=''
 
     for row_index, cols in rows.items():
         
         for col_index, text in cols.items():
-            # print("********************************************************************")
-            # print(text)
-            # print(type(text))
-            
-            # print("****************************************")
+           
             if(text=="QTY "):
               l=3
               print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+              break
               
            
     if(l>=1):
@@ -126,18 +121,31 @@ def generate_table_csv(table_result, blocks_map, table_index):
             t=[]
             print("_____________________________________")
             print(rows.items())
-            print(type(rows.items()))
-            # print(type(rows.items())['0'])
-            # print(type(rows.items())[0][0])
             print("_____________________________________")
             for col_index, text in cols.items():
                 
                 csv += '{}'.format(text) + ","
                 t.append(text)
             print("_+++++++++++++++++++++++++++++++++++++++") 
+            r.append(t)
+
             print(t)
             csv += '\n'
-        
+    r=r[:-1]  
+    print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")       
+    print(r)    
+
+    for i in r:
+        t=()
+        tup=tuple(i)
+        print(tup)
+
+        sql = "INSERT INTO materials (PART_No, REF_DRG_No,DESCRIPTION,MATERIAL,QTY,UNIT,MASS_Kgs) VALUES (%s, %s,%s,%s,%s,%s,%s)"
+        val = tup
+        g=mycursor.execute(sql, val)
+        mydb.commit()  
+        print(mycursor.rowcount, "record inserted.") 
+        print(g)   
     # csv += '\n\n\n'
     return csv
 
