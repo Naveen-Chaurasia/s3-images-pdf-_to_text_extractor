@@ -1,3 +1,4 @@
+#For json as a response
 from flask import Flask, jsonify
 import boto3
 import time

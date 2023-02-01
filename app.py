@@ -1,66 +1,50 @@
-# https://docs.aws.amazon.com/textract/latest/dg/examples-extract-kvp.html
 
+#app for inserting pdftables into mysql database
 from flask import Flask, jsonify,request
-import boto3
-import sys
-import re
+import mysql.connector
+import webbrowser, os
 import json
-from collections import defaultdict
+import boto3
+import io
+from io import BytesIO
+import sys
+from pprint import pprint
+
 app = Flask(__name__)
 
-# def convertToBinaryData(filename):
-#     # Convert digital data to binary format
-#     with open("D:\pythone\s3_to_text_extractor_FLASK_API\Mirror.pdf", 'rb') as file:
-#         binaryData = file.read()
-#     return binaryData
+mydb = mysql.connector.connect(
+  host="localhost",
+  user="root",
+  password="root",
+  database="ardhi"
+)
 
-def get_kv_map(file_name):
-    with open(file_name, 'rb') as file:
-        img_test = file.read()
-        bytes_test = bytearray(img_test)
-        print('Image loaded', file_name)
+mycursor = mydb.cursor()
 
-    # process using image bytes
-    client = boto3.client('textract')
-    response = client.analyze_document(Document={'Bytes': bytes_test}, FeatureTypes=['FORMS'])
+#mycursor.execute("CREATE DATABASE Ardhi")
+#mycursor.execute("CREATE TABLE Materials ( PART_No  VARCHAR(255), REF_DRG_No  VARCHAR(255),DESCRIPTION  VARCHAR(255),MATERIAL VARCHAR(255),QTY VARCHAR(255), UNIT VARCHAR(255),MASS_Kgs VARCHAR(255))")
 
-    # Get the text blocks
-    blocks = response['Blocks']
-    print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-    print(blocks)
-    print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-###################################
-    # get key and value maps
-    key_map = {}
-    value_map = {}
-    block_map = {}
-    for block in blocks:
-        block_id = block['Id']
-        block_map[block_id] = block
-        if block['BlockType'] == "KEY_VALUE_SET":
-            if 'KEY' in block['EntityTypes']:
-                key_map[block_id] = block
-            else:
-                value_map[block_id] = block
-    return key_map, value_map, block_map
+# https://docs.aws.amazon.com/textract/latest/dg/examples-export-table-csv.html
 
 
-def get_kv_relationship(key_map, value_map, block_map):
-    kvs = defaultdict(list)
-    for block_id, key_block in key_map.items():
-        value_block = find_value_block(key_block, value_map)
-        key = get_text(key_block, block_map)
-        val = get_text(value_block, block_map)
-        kvs[key].append(val)
-    return kvs
 
 
-def find_value_block(key_block, value_map):
-    for relationship in key_block['Relationships']:
-        if relationship['Type'] == 'VALUE':
-            for value_id in relationship['Ids']:
-                value_block = value_map[value_id]
-    return value_block
+def get_rows_columns_map(table_result, blocks_map):
+    rows = {}
+    for relationship in table_result['Relationships']:
+        if relationship['Type'] == 'CHILD':
+            for child_id in relationship['Ids']:
+                cell = blocks_map[child_id]
+                if cell['BlockType'] == 'CELL':
+                    row_index = cell['RowIndex']
+                    col_index = cell['ColumnIndex']
+                    if row_index not in rows:
+                        # create new row
+                        rows[row_index] = {}
+                        
+                    # get the text value
+                    rows[row_index][col_index] = get_text(cell, blocks_map)
+    return rows
 
 
 def get_text(result, blocks_map):
@@ -73,43 +57,127 @@ def get_text(result, blocks_map):
                     if word['BlockType'] == 'WORD':
                         text += word['Text'] + ' '
                     if word['BlockType'] == 'SELECTION_ELEMENT':
-                        if word['SelectionStatus'] == 'SELECTED':
-                            text += 'X '
-
+                        if word['SelectionStatus'] =='SELECTED':
+                            text +=  'X '    
     return text
 
 
-def print_kvs(kvs):
-    for key, value in kvs.items():
-        print(key, ":", value)
+def get_table_csv_results(file_name):
+
+    with open(file_name, 'rb') as file:
+        img_test = file.read()
+        bytes_test = bytearray(img_test)
+        print('Image loaded', file_name)
+
+    # process using image bytes
+    # get the results
+    client = boto3.client('textract')
+
+    response = client.analyze_document(Document={'Bytes': bytes_test}, FeatureTypes=['TABLES'])
+
+    # Get the text blocks
+    blocks=response['Blocks']
+    # pprint(blocks)
+
+    blocks_map = {}
+    table_blocks = []
+    for block in blocks:
+        blocks_map[block['Id']] = block
+        if block['BlockType'] == "TABLE":
+            table_blocks.append(block)
+
+    if len(table_blocks) <= 0:
+        return "<b> NO Table FOUND </b>"
+
+    csv = ''
+    for index, table in enumerate(table_blocks):
+
+        print(table_blocks)
+        csv += generate_table_csv(table, blocks_map, index +1)
+        # csv += '\n\n'
+
+    return csv
+
+def generate_table_csv(table_result, blocks_map, table_index):
+    rows = get_rows_columns_map(table_result, blocks_map)
+    l=0
+    r=[]
+    print("IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII")
+    print(rows)
+    print(type(rows))
+    print("IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII")
+
+    table_id = 'Table_' + str(table_index)
+
+    csv=''
+
+    for row_index, cols in rows.items():
+        
+        for col_index, text in cols.items():
+           
+            if(text=="QTY "):
+              l=3
+              print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+              break
+              
+           
+    if(l>=1):
+        for row_index, cols in rows.items():
+            t=[]
+            print("_____________________________________")
+            print(rows.items())
+            print("_____________________________________")
+            for col_index, text in cols.items():
+                
+                csv += '{}'.format(text) + ","
+                t.append(text)
+            print("_+++++++++++++++++++++++++++++++++++++++") 
+            r.append(t)
+
+            print(t)
+            csv += '\n'
+    r=r[:-1]  
+    print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")       
+    print(r)    
+
+    for i in r:
+        t=()
+        tup=tuple(i)
+        print(tup)
+
+        sql = "INSERT INTO materials (PART_No, REF_DRG_No,DESCRIPTION,MATERIAL,QTY,UNIT,MASS_Kgs) VALUES (%s, %s,%s,%s,%s,%s,%s)"
+        val = tup
+        g=mycursor.execute(sql, val)
+        mydb.commit()  
+        print(mycursor.rowcount, "record inserted.") 
+        print(g)   
+    # csv += '\n\n\n'
+    return csv
 
 
-def search_value(kvs, search_key):
-    for key, value in kvs.items():
-        if re.search(search_key, key, re.IGNORECASE):
-            return value
 
 @app.route("/")
+
 def home():
-    # file_name = (request.files['file'])
+
     uploaded_file = request.files['file']
     if uploaded_file.filename != '':
         uploaded_file.save(uploaded_file.filename)
         #file = convertToBinaryData(uploaded_file.filename)
         file_name=uploaded_file.filename
-    key_map, value_map, block_map = get_kv_map(file_name)
+    table_csv = get_table_csv_results(file_name)
 
-    # Get Key Value relationship
-    kvs = get_kv_relationship(key_map, value_map, block_map)
-    print("\n\n== FOUND KEY : VALUE pairs ===\n")
-    return kvs
-    # print_kvs(kvs)
+    output_file = 'output.csv'
 
-    # # Start searching a key value
-    # while input('\n Do you want to search a value for a key? (enter "n" for exit) ') != 'n':
-    #     search_key = input('\n Enter a search key:')
-    #     print('The value is:', search_value(kvs, search_key))
+    # replace content
+    with open(output_file, "wt") as fout:
+        fout.write(table_csv)
 
+    # show the results
+    print('CSV OUTPUT FILE: ', output_file)
+    return "records inserted"
 
 
-
+# if __name__ == "__main__":
+#     file_name = sys.argv[1]
+#     main(file_name)
