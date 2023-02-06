@@ -100,7 +100,7 @@ def generate_table_csv(table_result, blocks_map, table_index):
     print("IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII")
     print(rows)
     print(type(rows))
-    print("IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII")
+    
 
     table_id = 'Table_' + str(table_index)
 
@@ -121,7 +121,7 @@ def generate_table_csv(table_result, blocks_map, table_index):
             t=[]
             print("_____________________________________")
             print(rows.items())
-            print("_____________________________________")
+         
             for col_index, text in cols.items():
                 
                 csv += '{}'.format(text) + ","
